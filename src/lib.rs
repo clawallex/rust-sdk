@@ -9,6 +9,24 @@ use sha2::{Digest, Sha256};
 
 type HmacSha256 = Hmac<Sha256>;
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/// Funding source for card creation.
+pub mod mode_code {
+    /// Mode A: deduct from wallet balance.
+    pub const WALLET: i32 = 100;
+    /// Mode B: on-chain x402 USDC payment.
+    pub const X402: i32 = 200;
+}
+
+/// Card lifecycle.
+pub mod card_type {
+    /// One-time use, auto-destroyed after a single transaction.
+    pub const FLASH: i32 = 100;
+    /// Reloadable, suitable for recurring payments.
+    pub const STREAM: i32 = 200;
+}
+
 // ─── Errors ───────────────────────────────────────────────────────────────────
 
 /// Payment challenge returned with HTTP 402 during a Mode B card order.
