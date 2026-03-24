@@ -211,8 +211,8 @@ integration_test!(test_transaction_filter_by_card, |client| Box::pin(async move 
 integration_test!(test_mode_a_create_verify_close, |client| Box::pin(async move {
     let req_id = uuid::Uuid::new_v4().to_string();
     let params = clawallex_sdk::NewCardParams {
-        mode_code: 100,
-        card_type: 100,
+        mode_code: clawallex_sdk::mode_code::WALLET,
+        card_type: clawallex_sdk::card_type::FLASH,
         amount: "5.0000".into(),
         client_request_id: req_id,
         ..Default::default()
@@ -238,7 +238,7 @@ integration_test!(test_mode_a_create_verify_close, |client| Box::pin(async move 
             if let Ok(list) = client.card_list(clawallex_sdk::CardListParams {
                 page: Some(1), page_size: Some(100),
             }).await {
-                if let Some(card) = list.data.iter().find(|c| !existing_ids.contains(&c.card_id) && c.mode_code == 100) {
+                if let Some(card) = list.data.iter().find(|c| !existing_ids.contains(&c.card_id) && c.mode_code == clawallex_sdk::mode_code::WALLET) {
                     resolved = card.card_id.clone();
                     eprintln!("poll {}: found new card {}", i + 1, resolved);
                     break;
@@ -264,13 +264,41 @@ integration_test!(test_mode_a_create_verify_close, |client| Box::pin(async move 
 
 integration_test!(test_mode_b_returns_402, |client| Box::pin(async move {
     let client_req_id = uuid::Uuid::new_v4().to_string();
+    let payer_addr = "0x850E5F8D352CC8f501754f8835eE28e4ea4Ba68C";
+    let dummy_addr = "0x0000000000000000000000000000000000000000";
+    let dummy_nonce = format!("0x{}", "00".repeat(32));
+    let dummy_sig   = format!("0x{}", "00".repeat(65));
+    let mut extra = std::collections::HashMap::new();
+    extra.insert("card_amount".into(), "1.0000".into());
+    extra.insert("paid_amount".into(), "1.0500".into());
+
     let result = client.new_card(&clawallex_sdk::NewCardParams {
-        mode_code: 200,
-        card_type: 200,
-        amount: "100.0000".into(),
+        mode_code: clawallex_sdk::mode_code::X402,
+        card_type: clawallex_sdk::card_type::STREAM,
+        amount: "1.0000".into(),
         client_request_id: client_req_id,
         chain_code: Some("ETH".into()),
         token_code: Some("USDC".into()),
+        payer_address: Some(payer_addr.into()),
+        x402_version: Some(1),
+        payment_payload: Some(serde_json::json!({
+            "scheme": "exact", "network": "ETH",
+            "payload": {
+                "signature": dummy_sig,
+                "authorization": {
+                    "from": payer_addr, "to": dummy_addr,
+                    "value": "1050000", "validAfter": "0", "validBefore": "9999999999",
+                    "nonce": dummy_nonce,
+                }
+            }
+        })),
+        payment_requirements: Some(serde_json::json!({
+            "scheme": "exact", "network": "ETH",
+            "asset": dummy_addr, "payTo": dummy_addr,
+            "maxAmountRequired": "1050000",
+            "extra": {"referenceId": "dummy"}
+        })),
+        extra: Some(extra),
         ..Default::default()
     }).await;
     match result {
