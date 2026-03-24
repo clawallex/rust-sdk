@@ -100,9 +100,11 @@ Mode A is the simplest path: cards are paid from your Clawallex wallet balance. 
 ### Create a Card
 
 ```rust
+use clawallex_sdk::{mode_code, card_type};
+
 let order = client.new_card(&NewCardParams {
-    mode_code: 100,                              // Mode A
-    card_type: 100,                              // 100=flash, 200=stream
+    mode_code: mode_code::WALLET,                // Mode A
+    card_type: card_type::FLASH,                 // FLASH or STREAM
     amount: "50.0000".into(),                    // card face value in USD
     client_request_id: uuid::Uuid::new_v4().to_string(),
     ..Default::default()
@@ -189,15 +191,15 @@ Agent → POST /card-orders (same client_request_id) → 200 + card created
 ### Stage 1 — Request Quote (402 is expected, not an error)
 
 ```rust
-use clawallex::{Client, NewCardParams, Error, CardOrder402Details};
+use clawallex_sdk::{Client, NewCardParams, Error, CardOrder402Details, mode_code, card_type};
 use uuid::Uuid;
 
 let client_request_id = Uuid::new_v4().to_string();
 let mut details: Option<CardOrder402Details> = None;
 
 match client.new_card(&NewCardParams {
-    mode_code: 200,
-    card_type: 200,              // 100=flash, 200=stream
+    mode_code: mode_code::X402,
+    card_type: card_type::STREAM,  // FLASH or STREAM
     amount: "200.0000".into(),
     client_request_id: client_request_id.clone(),
     chain_code: Some("ETH".into()),   // or "BASE"
@@ -312,8 +314,8 @@ let requirements = X402PaymentRequirements {
 };
 
 let order = client.new_card(&NewCardParams {
-    mode_code: 200,
-    card_type: 200,
+    mode_code: mode_code::X402,
+    card_type: card_type::STREAM,
     amount: "200.0000".into(),
     client_request_id: client_request_id,            // MUST reuse from Stage 1
     x402_version: Some(1),
@@ -421,12 +423,12 @@ match client.new_card(&params).await {
 
 ## Enums Reference
 
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `mode_code` | `100` | Mode A — wallet funded |
-| `mode_code` | `200` | Mode B — x402 on-chain |
-| `card_type` | `100` | Flash card |
-| `card_type` | `200` | Stream card (subscription) |
+| Constant | Named Constant | Value | Description |
+|----------|---------------|-------|-------------|
+| `mode_code` | `mode_code::WALLET` | `100` | Mode A — wallet funded |
+| `mode_code` | `mode_code::X402` | `200` | Mode B — x402 on-chain |
+| `card_type` | `card_type::FLASH` | `100` | Flash card |
+| `card_type` | `card_type::STREAM` | `200` | Stream card (subscription) |
 | `card.status` | `200` | Active |
 | `card.status` | `220` | Closing |
 | `card.status` | `230` | Expired |
