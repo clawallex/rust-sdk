@@ -231,9 +231,11 @@ pub struct NewCardParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub issuer_card_currency: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub issuer_spending_controls: Option<String>,
+    pub tx_limit: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub allow_3ds_transactions: Option<String>,
+    pub allowed_mcc: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocked_mcc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chain_code: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -315,6 +317,9 @@ pub struct CardDetailsResponse {
     pub encrypted_sensitive_data: EncryptedSensitiveData,
     pub expiry_month: i32,
     pub expiry_year: i32,
+    pub tx_limit: String,
+    pub allowed_mcc: String,
+    pub blocked_mcc: String,
     pub card_currency: String,
     pub available_balance: String,
     pub first_name: String,
@@ -340,15 +345,25 @@ pub struct Transaction {
     pub card_id: String,
     pub card_tx_id: String,
     pub issuer_tx_id: String,
+    pub issuer_ori_tx_id: String,
     pub action_type: i32,
     pub tx_type: i32,
+    pub process_status: String,
     pub amount: String,
     pub fee_amount: String,
+    pub fee_currency: String,
+    pub billing_amount: String,
+    pub billing_currency: String,
+    pub transaction_amount: String,
+    pub transaction_currency: String,
     pub status: i32,
+    pub card_fund_applied: i32,
     pub is_in_progress: i32,
     pub merchant_name: String,
     pub mcc: String,
     pub decline_reason: String,
+    pub description: String,
+    pub issuer_card_available_balance: String,
     pub occurred_at: String,
     pub settled_at: Option<String>,
     pub webhook_event_id: String,
@@ -363,6 +378,29 @@ pub struct TransactionListResponse {
     pub page_size: i32,
     pub total: i32,
     pub data: Vec<Transaction>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct UpdateCardParams {
+    pub client_request_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tx_limit: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allowed_mcc: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blocked_mcc: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpdateCardResponse {
+    pub card_id: String,
+    pub card_order_id: String,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BatchCardBalanceResponse {
+    pub data: Vec<CardBalanceResponse>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -604,6 +642,14 @@ impl Client {
 
     pub async fn card_details(&self, card_id: &str) -> Result<CardDetailsResponse, Error> {
         self.get(&format!("/payment/cards/{card_id}/details"), &[]).await
+    }
+
+    pub async fn batch_card_balances(&self, card_ids: &[&str]) -> Result<BatchCardBalanceResponse, Error> {
+        self.post("/payment/cards/balances", &serde_json::json!({"card_ids": card_ids})).await
+    }
+
+    pub async fn update_card(&self, card_id: &str, params: &UpdateCardParams) -> Result<UpdateCardResponse, Error> {
+        self.post(&format!("/payment/cards/{card_id}/update"), params).await
     }
 
     // ── Transactions ──────────────────────────────────────────────────────────
