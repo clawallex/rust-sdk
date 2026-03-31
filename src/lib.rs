@@ -250,6 +250,10 @@ pub struct NewCardParams {
     pub payment_requirements: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extra: Option<std::collections::HashMap<String, String>>,
+    /// Card TTL in seconds. Flash cards only; omit for the default 24-hour expiry.
+    /// Sets issuer `expiry_at = now + ttl`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ttl: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payer_address: Option<String>,
 }
